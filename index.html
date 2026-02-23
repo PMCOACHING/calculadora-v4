@@ -1,0 +1,1188 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Calculadora de Calorías y Macros</title>
+  <style>
+    :root{
+      --bg:#0b0f17;
+      --card:#121a27;
+      --muted:#8ea0b8;
+      --text:#eaf1ff;
+      --accent:#4ad6a7;
+      --warn:#ffcc66;
+      --danger:#ff6b6b;
+      --line:rgba(255,255,255,.08);
+      --field:rgba(255,255,255,.10);
+      --ok: rgba(74,214,167,.18);
+      --shadow: 0 10px 40px rgba(0,0,0,.35);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: radial-gradient(1200px 800px at 20% 0%, #121a27 0%, var(--bg) 55%);
+      color:var(--text);
+    }
+    .wrap{ max-width:1040px; margin:0 auto; padding:28px 16px 70px; }
+    header{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+    .topline{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px; width:max-content;
+      padding:6px 10px; border-radius:999px;
+      background:rgba(74,214,167,.12); color:var(--accent);
+      font-weight:900; font-size:13px;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px; width:max-content;
+      padding:6px 10px; border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      color:#cfe0ff; font-weight:800; font-size:12px;
+    }
+    h1{ margin:0; font-size:28px; letter-spacing:-0.02em; }
+    p{ margin:0; color:var(--muted); line-height:1.5; }
+
+    .grid{ display:grid; grid-template-columns: 1.05fr .95fr; gap:16px; margin-top:16px; }
+    @media (max-width: 920px){ .grid{ grid-template-columns:1fr; } }
+
+    .card{
+      background:rgba(18,26,39,.92);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      padding:16px;
+      box-shadow: var(--shadow);
+    }
+    .card h2{ margin:0 0 10px; font-size:16px; color:#cfe0ff; }
+    .sub{ margin-top:6px; color:var(--muted); font-size:12px; line-height:1.45; }
+
+    .fields{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width: 520px){ .fields{ grid-template-columns:1fr; } }
+
+    label{ display:flex; flex-direction:column; gap:6px; font-size:13px; color:#cfe0ff; position:relative; }
+    .labelRow{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .hint{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:18px; height:18px; border-radius:999px;
+      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12);
+      color:#cfe0ff; font-size:12px; font-weight:900; cursor:help;
+      user-select:none;
+    }
+    .tooltip{
+      position:absolute; z-index:10; left:0; top:100%;
+      margin-top:6px; padding:10px 10px;
+      background:rgba(15,22,35,.98);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:12px;
+      width:min(360px, 92vw);
+      box-shadow: 0 14px 50px rgba(0,0,0,.45);
+      color:#eaf1ff; font-size:12px; line-height:1.45;
+      display:none;
+    }
+    label.showTip .tooltip{ display:block; }
+
+    input, select{
+      background:#0f1623;
+      border:1px solid var(--field);
+      color:var(--text);
+      border-radius:12px;
+      padding:11px 12px;
+      font-size:15px;
+      outline:none;
+      transition: box-shadow .15s ease, border-color .15s ease;
+    }
+    input:focus, select:focus{
+      border-color: rgba(74,214,167,.55);
+      box-shadow: 0 0 0 4px rgba(74,214,167,.12);
+    }
+    .invalid input, .invalid select{
+      border-color: rgba(255,107,107,.65) !important;
+      box-shadow: 0 0 0 4px rgba(255,107,107,.12) !important;
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; align-items:center; }
+    button{
+      cursor:pointer; border:0; border-radius:12px;
+      padding:12px 14px; font-weight:950; font-size:15px;
+      background: linear-gradient(135deg, rgba(74,214,167,.95), rgba(74,214,167,.55));
+      color:#071016;
+    }
+    button.secondary{
+      background: transparent; color: #cfe0ff;
+      border:1px solid rgba(255,255,255,.14);
+      font-weight:850;
+    }
+    button.ghost{
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      color:#eaf1ff;
+      font-weight:850;
+    }
+    button.smallBtn{ padding:10px 12px; font-size:14px; border-radius:12px; }
+
+    .note{ font-size:12px; color:var(--muted); margin-top:10px; line-height:1.45; }
+    .divider{ height:1px; background:var(--line); margin:14px 0; }
+
+    .kpis{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width: 520px){ .kpis{ grid-template-columns:1fr; } }
+
+    .kpi{
+      background:#0f1623;
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:14px;
+      padding:12px;
+    }
+    .kpi .t{ font-size:12px; color:var(--muted); }
+    .kpi .v{ font-size:20px; font-weight:980; margin-top:4px; }
+    .kpi .s{ font-size:12px; color:#b8c7dd; margin-top:4px; line-height:1.35; }
+    .pill{ display:inline-flex; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:950; }
+    .pill.warn{ background:rgba(255,204,102,.14); color:var(--warn); }
+    .pill.ok{ background:rgba(74,214,167,.12); color:var(--accent); }
+    .pill.bad{ background:rgba(255,107,107,.14); color:var(--danger); }
+
+    .macro-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-top:10px; }
+    @media (max-width: 520px){ .macro-grid{ grid-template-columns:1fr; } }
+
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    .toast{
+      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+      background:rgba(15,22,35,.95); border:1px solid rgba(255,255,255,.14);
+      color:#eaf1ff; padding:10px 12px; border-radius:12px;
+      box-shadow:0 14px 50px rgba(0,0,0,.45);
+      font-size:13px; font-weight:800;
+      opacity:0; pointer-events:none; transition:opacity .18s ease;
+    }
+    .toast.show{ opacity:1; }
+
+    .sr{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+
+    .miniCTA{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      background: rgba(74,214,167,.08);
+      border:1px solid rgba(74,214,167,.18);
+      color:#dffaf0;
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .footerRow{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;
+      margin-top:12px;
+    }
+    a{ color: var(--accent); text-decoration:none; font-weight:850; }
+
+    /* ✅ PRINT: imprime solo resultados (panel derecho) */
+    @media print {
+      body { background:#fff; color:#000; }
+      .wrap { padding:0; }
+      header, #inputsCard, .toast { display:none !important; }
+      .grid { grid-template-columns:1fr !important; }
+      .card { box-shadow:none; border:1px solid #ddd; background:#fff; }
+      .kpi { background:#fff; border:1px solid #e5e5e5; }
+      a { color:#000; text-decoration:none; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="topline">
+        <span class="badge" id="dynamicBadge">⚡ Basado en tu composición corporal</span>
+        <span class="chip" id="srcChip" style="display:none;">📍 Fuente: <span id="srcVal"></span></span>
+        <span class="chip" id="useChip" style="display:none;">🔥 Usos: <span id="useVal"></span></span>
+      </div>
+      <h1>Calcula tus calorías reales para perder grasa sin perder músculo</h1>
+      <p>Estimación basada en tu composición corporal. Sin fórmulas genéricas. Sin adivinar.</p>
+    </header>
+
+    <div class="grid">
+      <!-- INPUTS -->
+      <section class="card" id="inputsCard">
+        <h2>1) Tus datos</h2>
+
+        <div class="fields">
+          <label id="sexLabel">
+            <span class="labelRow">Sexo</span>
+            <select id="sex">
+              <option value="male">Hombre</option>
+              <option value="female">Mujer</option>
+            </select>
+          </label>
+
+          <label id="ageLabel">
+            <span class="labelRow">Edad (años)</span>
+            <input id="age" type="number" min="12" max="99" placeholder="Ej: 28" inputmode="numeric" />
+          </label>
+
+          <label id="heightLabel">
+            <span class="labelRow">Altura (cm)</span>
+            <input id="height" type="number" min="120" max="230" placeholder="Ej: 178" inputmode="numeric" />
+          </label>
+
+          <label id="weightLabel">
+            <span class="labelRow">Peso (kg)</span>
+            <input id="weight" type="number" min="35" max="250" step="0.1" placeholder="Ej: 85.0" inputmode="decimal" />
+          </label>
+
+          <label id="waistLabel">
+            <span class="labelRow">
+              Cintura (cm)
+              <span class="hint" data-tip="waist">?</span>
+            </span>
+            <div class="tooltip" data-tipbox="waist">
+              A la altura del ombligo. En ayunas, sin apretar la cinta. Haz 2 medidas y promedia.
+            </div>
+            <input id="waist" type="number" min="40" max="200" step="0.1" placeholder="Ej: 92.5" inputmode="decimal" />
+          </label>
+
+          <label id="neckLabel">
+            <span class="labelRow">
+              Cuello (cm)
+              <span class="hint" data-tip="neck">?</span>
+            </span>
+            <div class="tooltip" data-tipbox="neck">
+              Rodeando el cuello justo por debajo de la nuez. Cinta pegada pero sin apretar.
+            </div>
+            <input id="neck" type="number" min="20" max="80" step="0.1" placeholder="Ej: 39.0" inputmode="decimal" />
+          </label>
+
+          <label id="hipLabel" style="display:none;">
+            <span class="labelRow">
+              Cadera (cm)
+              <span class="hint" data-tip="hip">?</span>
+            </span>
+            <div class="tooltip" data-tipbox="hip">
+              En la parte más ancha de la cadera/glúteo. Cinta horizontal, sin apretar.
+            </div>
+            <input id="hip" type="number" min="50" max="200" step="0.1" placeholder="Ej: 102.0" inputmode="decimal" />
+          </label>
+
+          <label id="activityLabel">
+            <span class="labelRow">Actividad (mantenimiento)</span>
+            <select id="activity">
+              <option value="1.2">Sedentario (1.2)</option>
+              <option value="1.375">Ligero (1.375)</option>
+              <option value="1.55" selected>Moderado (1.55)</option>
+              <option value="1.725">Alto (1.725)</option>
+              <option value="1.9">Muy alto (1.9)</option>
+            </select>
+          </label>
+
+          <label id="goalLabel">
+            <span class="labelRow">
+              Objetivo
+              <span class="hint" data-tip="goal">?</span>
+            </span>
+            <div class="tooltip" data-tipbox="goal">
+              Déficit: perder grasa. Mantenimiento: estabilidad. Volumen limpio: subir lento minimizando grasa.
+            </div>
+            <select id="goal">
+              <option value="cut" selected>Déficit</option>
+              <option value="maint">Mantenimiento</option>
+              <option value="leanbulk">Volumen limpio</option>
+            </select>
+          </label>
+
+          <label id="aggrLabel">
+            <span class="labelRow">
+              Nivel (solo déficit)
+              <span class="hint" data-tip="aggr">?</span>
+            </span>
+            <div class="tooltip" data-tipbox="aggr">
+              10% suave, 15% estándar, 20% agresivo. Si tu % graso es bajo, te avisaré.
+            </div>
+            <select id="aggr">
+              <option value="0.10">10% (suave)</option>
+              <option value="0.15" selected>15% (estándar)</option>
+              <option value="0.20">20% (agresivo)</option>
+            </select>
+          </label>
+
+          <label id="macroPrefLabel">
+            <span class="labelRow">
+              Preferencia macros
+              <span class="hint" data-tip="pref">?</span>
+            </span>
+            <div class="tooltip" data-tipbox="pref">
+              Mantiene proteína y calorías. “Más carbs” sube carbohidratos bajando grasas (y viceversa).
+            </div>
+            <select id="macroPref">
+              <option value="balanced" selected>Equilibrado</option>
+              <option value="highcarb">Más carbs</option>
+              <option value="highfat">Más grasas</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="calcBtn" type="button">Calcular</button>
+          <button class="ghost smallBtn" id="exampleBtn" type="button">⚡ Usar ejemplo</button>
+          <button class="secondary" id="resetBtn" type="button">Reset</button>
+          <span class="small" id="status"></span>
+        </div>
+
+        <div class="miniCTA">
+          Si quieres que te lo revise en 30 segundos (según tu rutina real), DM <b>"DEFICIT"</b> en Instagram.
+        </div>
+
+        <div class="note">
+          <b>Privacidad:</b> por defecto, esta herramienta <b>no envía tus datos a ningún servidor</b>. Solo se guardan en tu navegador para recordarlos (puedes hacer Reset).
+        </div>
+
+        <div class="note">
+          Atajo: puedes pulsar <b>Enter</b> para calcular.
+        </div>
+      </section>
+
+      <!-- OUTPUTS -->
+      <section class="card" id="resultsCard">
+        <h2>2) Resultados</h2>
+
+        <div class="kpis">
+          <div class="kpi">
+            <div class="t">% grasa estimado</div>
+            <div class="v" id="bf">—</div>
+            <div class="s" id="bfHint">Introduce datos y calcula.</div>
+          </div>
+          <div class="kpi">
+            <div class="t">Masa magra (LBM)</div>
+            <div class="v" id="lbm">—</div>
+            <div class="s">Base para metabolismo y macros.</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="kpis">
+          <div class="kpi">
+            <div class="t">BMR (Katch-McArdle)</div>
+            <div class="v" id="bmr">—</div>
+            <div class="s">Tu gasto en reposo (aprox.).</div>
+          </div>
+          <div class="kpi">
+            <div class="t">Mantenimiento (TDEE)</div>
+            <div class="v" id="tdee">—</div>
+            <div class="s" id="tdeeHint">Actividad: —</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="kpi">
+          <div class="t" id="targetTitle">Objetivo</div>
+          <div class="v" id="targetKcal">—</div>
+          <div class="s" id="targetTag"></div>
+
+          <div class="macro-grid">
+            <div class="kpi">
+              <div class="t">Proteína</div>
+              <div class="v" id="prot">—</div>
+              <div class="s small">2 g/kg masa magra</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Grasas</div>
+              <div class="v" id="fat">—</div>
+              <div class="s small" id="fatHint">0.8 g/kg masa magra</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Carbohidratos</div>
+              <div class="v" id="carb">—</div>
+              <div class="s small">Resto de calorías</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="kpi">
+          <div class="t">Interpretación</div>
+          <div class="s" id="analysis">—</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="kpi">
+          <div class="t">Recomendación de pasos</div>
+          <div class="s" id="stepsRec">—</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="kpi">
+          <div class="t">Ajuste semanal (simple)</div>
+          <div class="s" id="weeklyAdjust">—</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="kpi">
+          <div class="t">¿Quieres que lo ajuste a tu caso real?</div>
+          <div class="s" id="ctaContext">
+            Esta herramienta es una estimación general. Si entrenas fuerza, haces deportes de contacto
+            o ya has hecho varias dietas, el ajuste cambia bastante.<br><br>
+            👉 Escríbeme <b>"DEFICIT"</b> por Instagram y lo vemos contigo.
+          </div>
+
+          <div class="actions">
+            <button class="ghost" id="copyBtn" type="button">📋 Copiar resultados</button>
+            <button class="ghost" id="shareBtn" type="button">📤 Compartir</button>
+            <button class="ghost" id="waBtn" type="button">💬 WhatsApp</button>
+            <button id="igBtn" type="button">📩 Abrir Instagram</button>
+            <button class="secondary" id="printBtn" type="button">🖨️ Guardar/Imprimir</button>
+          </div>
+
+          <div class="note">
+            Tip: “Guardar/Imprimir” crea un PDF en móvil/ordenador (útil para guardarlo).
+          </div>
+        </div>
+
+        <div class="footerRow">
+          <div class="note">
+            <b>Disclaimer:</b> estimación orientativa. No sustituye consejo médico o nutricional.
+          </div>
+          <div class="note">
+            Creado por <a id="igLink" href="#" rel="noopener noreferrer" target="_blank">@pipemoralescoach</a>
+          </div>
+        </div>
+
+        <div class="sr" id="resultsTextForCopy">—</div>
+      </section>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Copiado ✅</div>
+
+  <script>
+    /*****************
+     * CONFIG
+     *****************/
+    const INSTAGRAM_USERNAME = "pipemoralescoach"; // sin @
+    const TRACKING_ENDPOINT = ""; // opcional
+
+    /*****************
+     * DOM / HELPERS
+     *****************/
+    const $ = (id) => document.getElementById(id);
+
+    function round1(x){ return Math.round(x * 10) / 10; }
+    function round0(x){ return Math.round(x); }
+    function isNum(x){ return Number.isFinite(x) && !Number.isNaN(x); }
+    function log10(x){ return Math.log(x) / Math.LN10; }
+
+    function showToast(msg){
+      const t = $("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => t.classList.remove("show"), 1400);
+    }
+
+    // ✅ FIX: animación sin ser pisada + soporta sufijo
+    function animateNumber(el, toValue, decimals = 0, duration = 500, suffix = ""){
+      if(!el) return;
+
+      const fromText = (el.textContent || "").replace(/[^\d.-]/g,"");
+      const fromValue = parseFloat(fromText);
+      const start = Number.isFinite(fromValue) ? fromValue : 0;
+      const end = toValue;
+      const startTime = performance.now();
+
+      function tick(now){
+        const t = Math.min(1, (now - startTime) / duration);
+        const eased = 1 - Math.pow(1 - t, 3);
+        const v = start + (end - start) * eased;
+
+        const fmt = (decimals === 0) ? Math.round(v).toString() : v.toFixed(decimals);
+        el.textContent = fmt + suffix;
+
+        if(t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    function scrollToResults(){
+      const el = $("resultsCard");
+      if(!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function setInvalid(labelId, isInvalid){
+      const el = $(labelId);
+      if(!el) return;
+      el.classList.toggle("invalid", !!isInvalid);
+    }
+
+    function clearInvalids(){
+      ["sexLabel","ageLabel","heightLabel","weightLabel","waistLabel","neckLabel","hipLabel","activityLabel","goalLabel","aggrLabel","macroPrefLabel"].forEach(id=>{
+        const el = $(id);
+        if(el) el.classList.remove("invalid");
+      });
+    }
+
+    // ✅ Mejora UX: enfocar el primer campo inválido
+    function focusFirstInvalid(){
+      const el = document.querySelector(".invalid input, .invalid select");
+      if(el) el.focus();
+    }
+
+    /*****************
+     * TOOLTIPS
+     *****************/
+    function initTooltips(){
+      const hints = document.querySelectorAll(".hint");
+      hints.forEach(h => {
+        h.addEventListener("click", () => {
+          const label = h.closest("label");
+          if(!label) return;
+
+          const already = label.classList.contains("showTip");
+          document.querySelectorAll("label.showTip").forEach(x => x.classList.remove("showTip"));
+          if(!already) label.classList.add("showTip");
+        });
+      });
+
+      document.addEventListener("click", (e) => {
+        if(e.target.classList && e.target.classList.contains("hint")) return;
+        if(e.target.closest("label")?.classList.contains("showTip")) return;
+        document.querySelectorAll("label.showTip").forEach(x => x.classList.remove("showTip"));
+      });
+    }
+
+    /*****************
+     * FIELDS / STATE
+     *****************/
+    function toggleFields(){
+      const sex = $("sex").value;
+      $("hipLabel").style.display = (sex === "female") ? "flex" : "none";
+      if(sex === "male") $("hip").value = "";
+    }
+
+    function getInputs(){
+      return {
+        sex: $("sex").value,
+        age: parseFloat($("age").value),
+        h: parseFloat($("height").value),
+        w: parseFloat($("weight").value),
+        waist: parseFloat($("waist").value),
+        neck: parseFloat($("neck").value),
+        hip: parseFloat($("hip").value),
+        af: parseFloat($("activity").value),
+        goal: $("goal").value,
+        aggr: parseFloat($("aggr").value),
+        macroPref: $("macroPref").value,
+      };
+    }
+
+    function saveInputs(){
+      try{
+        const v = getInputs();
+        localStorage.setItem("deficitCalc_v4_inputs", JSON.stringify(v));
+      }catch(e){}
+    }
+
+    function loadInputs(){
+      try{
+        const raw = localStorage.getItem("deficitCalc_v4_inputs");
+        if(!raw) return;
+        const v = JSON.parse(raw);
+        if(v.sex) $("sex").value = v.sex;
+        toggleFields();
+        if(isNum(v.age)) $("age").value = v.age;
+        if(isNum(v.h)) $("height").value = v.h;
+        if(isNum(v.w)) $("weight").value = v.w;
+        if(isNum(v.waist)) $("waist").value = v.waist;
+        if(isNum(v.neck)) $("neck").value = v.neck;
+        if(isNum(v.hip)) $("hip").value = v.hip;
+        if(isNum(v.af)) $("activity").value = String(v.af);
+        if(v.goal) $("goal").value = v.goal;
+        if(isNum(v.aggr)) $("aggr").value = String(v.aggr);
+        if(v.macroPref) $("macroPref").value = v.macroPref;
+      }catch(e){}
+    }
+
+    function bumpUseCount(){
+      try{
+        const key = "deficitCalc_v4_useCount";
+        const n = parseInt(localStorage.getItem(key) || "0", 10) || 0;
+        const next = n + 1;
+        localStorage.setItem(key, String(next));
+        $("useVal").textContent = String(next);
+        $("useChip").style.display = "inline-flex";
+      }catch(e){}
+    }
+
+    /*****************
+     * SOURCE / BRANDING
+     *****************/
+    function initSourceAndBadge(){
+      const params = new URLSearchParams(window.location.search);
+      const srcFromUrl = (params.get("src") || "").trim().toLowerCase();
+
+      // ✅ Upgrade: permite ?u=nombreuser para reutilizar en colaboraciones
+      const uFromUrl = (params.get("u") || "").trim();
+      const username = uFromUrl || INSTAGRAM_USERNAME;
+
+      let src = srcFromUrl;
+      try{
+        if(src) localStorage.setItem("deficitCalc_v4_src", src);
+        else src = (localStorage.getItem("deficitCalc_v4_src") || "").trim().toLowerCase();
+      }catch(e){}
+
+      if(src){
+        $("srcVal").textContent = src.toUpperCase();
+        $("srcChip").style.display = "inline-flex";
+      }
+
+      const badge = $("dynamicBadge");
+      if(src === "ig"){
+        badge.textContent = `⚡ Recomendado por @${username}`;
+      } else if(src === "tiktok"){
+        badge.textContent = `⚡ Visto en TikTok (@${username})`;
+      } else if(src === "yt"){
+        badge.textContent = `⚡ Visto en YouTube (@${username})`;
+      } else {
+        badge.textContent = "⚡ Basado en tu composición corporal";
+      }
+
+      const igLink = $("igLink");
+      igLink.href = `https://www.instagram.com/${username}/`;
+    }
+
+    /*****************
+     * CALCULATIONS
+     *****************/
+    // ✅ Hardening: si log10 recibe <=0 => NaN seguro
+    function bodyFatPercent(sex, heightCm, waistCm, neckCm, hipCm){
+      if(sex === "male"){
+        const x = waistCm - neckCm;
+        if(x <= 0) return NaN;
+        return 495 / (1.0324 - 0.19077 * log10(x) + 0.15456 * log10(heightCm)) - 450;
+      } else {
+        const x = waistCm + hipCm - neckCm;
+        if(x <= 0) return NaN;
+        return 495 / (1.29579 - 0.35004 * log10(x) + 0.22100 * log10(heightCm)) - 450;
+      }
+    }
+
+    function validateAndMark(){
+      clearInvalids();
+
+      const v = getInputs();
+      let err = "";
+
+      if(!isNum(v.age)){ err = "Rellena la edad."; setInvalid("ageLabel", true); }
+      if(!isNum(v.h)){ err = err || "Rellena la altura."; setInvalid("heightLabel", true); }
+      if(!isNum(v.w)){ err = err || "Rellena el peso."; setInvalid("weightLabel", true); }
+      if(!isNum(v.waist)){ err = err || "Rellena la cintura."; setInvalid("waistLabel", true); }
+      if(!isNum(v.neck)){ err = err || "Rellena el cuello."; setInvalid("neckLabel", true); }
+
+      if(err){ focusFirstInvalid(); return err; }
+
+      if(v.age < 12 || v.age > 99){ setInvalid("ageLabel", true); focusFirstInvalid(); return "Edad fuera de rango."; }
+      if(v.h <= 0 || v.w <= 0){ setInvalid("heightLabel", true); setInvalid("weightLabel", true); focusFirstInvalid(); return "Altura/peso inválidos."; }
+
+      if(v.sex === "male"){
+        if(v.waist - v.neck <= 0){ setInvalid("waistLabel", true); setInvalid("neckLabel", true); focusFirstInvalid(); return "En hombre, cintura debe ser mayor que cuello."; }
+      } else {
+        if(!isNum(v.hip)){ setInvalid("hipLabel", true); focusFirstInvalid(); return "En mujer, añade también cadera."; }
+        if(v.waist + v.hip - v.neck <= 0){ setInvalid("waistLabel", true); setInvalid("hipLabel", true); setInvalid("neckLabel", true); focusFirstInvalid(); return "Revisa medidas: (cintura + cadera) debe ser mayor que cuello."; }
+      }
+
+      return null;
+    }
+
+    function computeStepsRec(v, bf){
+      if(v.af <= 1.375){
+        if(bf >= (v.sex === "male" ? 25 : 32)) return "Objetivo sugerido: 9.000–12.000 pasos/día. Prioriza constancia antes de recortar calorías.";
+        return "Objetivo sugerido: 8.000–10.000 pasos/día para mejorar adherencia y gasto total.";
+      }
+      if(v.af <= 1.55) return "Objetivo sugerido: 8.000–11.000 pasos/día (ajusta según tu día a día).";
+      return "Objetivo sugerido: 7.000–10.000 pasos/día (si el progreso se estanca, sube 1.500–2.000 pasos).";
+    }
+
+    function computeWeeklyAdjust(goal, kcalTarget){
+      if(goal === "cut"){
+        return "Si tu promedio semanal no baja en 10–14 días: recorta 100–150 kcal o suma 2.000 pasos/día. Evita tocar ambas cosas a la vez.";
+      }
+      if(goal === "maint"){
+        return "Si subes o bajas rápido: ajusta ±100 kcal y mantén 7–10 días antes de volver a tocar.";
+      }
+      return "Si subes más de ~0.25–0.5% de tu peso/semana: baja 100 kcal. Si no subes nada en 2–3 semanas: sube 100–150 kcal.";
+    }
+
+    function contextualCTA(goal, v, bf){
+      const lowBfMale = bf < 13;
+      const lowBfFemale = bf < 20;
+      const lowBf = (v.sex === "male") ? lowBfMale : lowBfFemale;
+
+      if(goal === "cut" && lowBf){
+        return `Tu % graso es relativamente bajo. Aquí el ajuste fino manda (rendimiento + conservación muscular). Si quieres, te lo afino con tu rutina real → DM "DEFICIT".`;
+      }
+      if(goal === "cut" && bf >= (v.sex === "male" ? 25 : 32)){
+        return `Tienes buen margen para perder grasa. Si quieres que te lo estructure fácil (pasos, calorías, macros y ajustes), DM "DEFICIT".`;
+      }
+      if(goal === "leanbulk"){
+        return `En volumen limpio lo importante es el ritmo. Si quieres un plan sin subir grasa de más, DM "DEFICIT" (y te lo ajusto).`;
+      }
+      return `Si entrenas fuerza/deporte o ya has hecho varias dietas, el ajuste cambia bastante. Si quieres que lo revise contigo → DM "DEFICIT".`;
+    }
+
+    function safeMacroAdjust(pref, lbm){
+      const prot = 2.0 * lbm;
+
+      let fatPerKg = 0.8;
+      if(pref === "highcarb") fatPerKg = 0.6;
+      if(pref === "highfat") fatPerKg = 1.0;
+
+      fatPerKg = Math.max(0.5, Math.min(1.2, fatPerKg));
+      const fat = fatPerKg * lbm;
+
+      return { protG: prot, fatG: fat, fatPerKg };
+    }
+
+    function calc(){
+      const err = validateAndMark();
+      if(err){
+        $("status").textContent = "⚠️ " + err;
+        $("status").style.color = "var(--warn)";
+        return null;
+      }
+
+      $("status").textContent = "";
+      $("status").style.color = "var(--muted)";
+
+      const v = getInputs();
+
+      // BF
+      let bf = bodyFatPercent(v.sex, v.h, v.waist, v.neck, v.hip);
+
+      // ✅ Extra hardening
+      if(!isNum(bf)){
+        $("status").textContent = "⚠️ Revisa las medidas (cintura/cuello/cadera).";
+        $("status").style.color = "var(--warn)";
+        setInvalid("waistLabel", true);
+        setInvalid("neckLabel", true);
+        if(v.sex === "female") setInvalid("hipLabel", true);
+        focusFirstInvalid();
+        return null;
+      }
+
+      bf = Math.max(3, Math.min(60, bf));
+
+      const fatKg = v.w * (bf / 100);
+      const lbm = v.w - fatKg;
+
+      // BMR / TDEE
+      const bmr = 370 + 21.6 * lbm;
+      const tdee = bmr * v.af;
+
+      // Target kcal by goal
+      let target = tdee;
+      let goalDesc = "";
+
+      if(v.goal === "cut"){
+        const deficit = v.aggr;
+        target = tdee * (1 - deficit);
+
+        const lowBf = (v.sex === "male") ? (bf < 13) : (bf < 20);
+        if(lowBf && deficit >= 0.20){
+          goalDesc = `⚠️ Ojo: con % graso bajo, 20% puede comprometer rendimiento/músculo. Considera 10–15%.`;
+        } else {
+          goalDesc = `Déficit elegido: <b>${round0(deficit*100)}%</b>`;
+        }
+      }
+      if(v.goal === "maint"){
+        target = tdee;
+        goalDesc = "Objetivo: estabilidad (ideal para recomposición o descanso de dieta).";
+      }
+      if(v.goal === "leanbulk"){
+        const surplus = 0.06;
+        target = tdee * (1 + surplus);
+        goalDesc = `Superávit suave: <b>${round0(surplus*100)}%</b> (subida lenta).`;
+      }
+
+      // Macros base
+      const m = safeMacroAdjust(v.macroPref, lbm);
+      let protKcal = m.protG * 4;
+      let fatKcal = m.fatG * 9;
+      let carbsKcal = target - (protKcal + fatKcal);
+      let carbG = carbsKcal / 4;
+
+      // ✅ Fix: evitar “0 carbs” en déficit (mínimo 50g) bajando grasa si hace falta
+      if(v.goal === "cut" && carbG < 50){
+        const minCarbG = 50;
+        const extraCarbKcal = (minCarbG - carbG) * 4;
+
+        const minFatG = 0.5 * lbm;
+        const possibleFatDropKcal = Math.max(0, (m.fatG - minFatG) * 9);
+
+        const takeFromFatKcal = Math.min(extraCarbKcal, possibleFatDropKcal);
+        m.fatG -= takeFromFatKcal / 9;
+
+        // recalcular
+        fatKcal = m.fatG * 9;
+        carbsKcal = Math.max(0, target - (protKcal + fatKcal));
+        carbG = Math.max(minCarbG, carbsKcal / 4);
+      } else {
+        carbsKcal = Math.max(0, carbsKcal);
+        carbG = carbsKcal / 4;
+      }
+
+      // Interpretation
+      let analysisText = "";
+      if(v.sex === "male"){
+        if(bf >= 25) analysisText = "Tienes bastante margen para perder grasa manteniendo músculo. Un enfoque constante (pasos + entrenamiento) suele ser muy efectivo.";
+        else if(bf >= 15) analysisText = "Déficit moderado recomendado. Prioriza rendimiento, sueño y progresión en el entrenamiento.";
+        else analysisText = "Tu % graso es relativamente bajo. Aquí manda el ajuste fino para no comprometer músculo y rendimiento.";
+      } else {
+        if(bf >= 32) analysisText = "Tienes margen suficiente para perder grasa sin comprometer masa muscular si el déficit está bien planteado.";
+        else if(bf >= 22) analysisText = "Déficit conservador–moderado recomendado para preservar rendimiento y masa muscular.";
+        else analysisText = "Tu % graso es relativamente bajo. Mejor enfoque conservador y ajustes pequeños.";
+      }
+
+      // Steps & weekly adjust
+      const stepsText = computeStepsRec(v, bf);
+      const weeklyText = computeWeeklyAdjust(v.goal, target);
+
+      // CTA context
+      $("ctaContext").textContent = contextualCTA(v.goal, v, bf);
+
+      $("bfHint").textContent = "Estimación por medidas (US Navy).";
+      $("tdeeHint").textContent = "Actividad: " + v.af;
+
+      $("targetTitle").textContent =
+        (v.goal === "cut") ? "Objetivo en déficit" :
+        (v.goal === "maint") ? "Objetivo mantenimiento" :
+        "Objetivo volumen limpio";
+
+      // ✅ FIX: animación real del % grasa y no se pisa
+      animateNumber($("bf"), bf, 1, 600, " %");
+      $("lbm").textContent = round1(lbm).toFixed(1) + " kg";
+      $("bmr").textContent = round0(bmr) + " kcal";
+      $("tdee").textContent = round0(tdee) + " kcal";
+      $("targetKcal").textContent = round0(target) + " kcal";
+
+      // Tag pills
+      let pill = "";
+      if(v.goal === "cut"){
+        const deficit = v.aggr;
+        if(deficit <= 0.12) pill = `<span class="pill ok">Suave</span>`;
+        else if(deficit <= 0.18) pill = `<span class="pill warn">Medio</span>`;
+        else pill = `<span class="pill bad">Agresivo</span>`;
+      } else if(v.goal === "maint"){
+        pill = `<span class="pill ok">Estable</span>`;
+      } else {
+        pill = `<span class="pill warn">Suave</span>`;
+      }
+
+      const prefLabel =
+        v.macroPref === "balanced" ? "Equilibrado" :
+        v.macroPref === "highcarb" ? "Más carbs" : "Más grasas";
+
+      $("targetTag").innerHTML = `${goalDesc ? goalDesc + " · " : ""}${pill} · Preferencia: <b>${prefLabel}</b>`;
+
+      // Macros
+      $("prot").textContent = round0(m.protG) + " g";
+      $("fat").textContent = round0(m.fatG) + " g";
+      $("carb").textContent = round0(carbG) + " g";
+      $("fatHint").textContent = `${round1(m.fatPerKg)} g/kg masa magra`;
+
+      $("analysis").textContent = analysisText;
+      $("stepsRec").textContent = stepsText;
+      $("weeklyAdjust").textContent = weeklyText;
+
+      // Build copy/share text
+      const state = { ...v, bf, lbm, bmr, tdee, target, protG:m.protG, fatG:m.fatG, carbG, analysisText, stepsText, weeklyText };
+      $("resultsTextForCopy").textContent = buildResultsText(state);
+
+      bumpUseCount();
+      saveInputs();
+      scrollToResults();
+
+      trackEvent("calculate", state);
+
+      return state;
+    }
+
+    function buildResultsText(state){
+      const sexTxt = state.sex === "male" ? "Hombre" : "Mujer";
+      const goalTxt = state.goal === "cut" ? "Déficit" : state.goal === "maint" ? "Mantenimiento" : "Volumen limpio";
+      const prefTxt = state.macroPref === "balanced" ? "Equilibrado" : state.macroPref === "highcarb" ? "Más carbs" : "Más grasas";
+      return [
+        "RESULTADOS — Calculadora Calorías/Macros",
+        `Perfil: ${sexTxt}, ${state.age}a, ${state.h}cm, ${state.w}kg`,
+        `Objetivo: ${goalTxt} · Preferencia: ${prefTxt}`,
+        `Actividad: ${state.af}`,
+        "—",
+        `% Grasa (estimado): ${round1(state.bf)} %`,
+        `Masa magra (LBM): ${round1(state.lbm)} kg`,
+        `BMR: ${round0(state.bmr)} kcal`,
+        `Mantenimiento (TDEE): ${round0(state.tdee)} kcal`,
+        `Objetivo kcal: ${round0(state.target)} kcal`,
+        "Macros (aprox):",
+        `Proteína: ${round0(state.protG)} g`,
+        `Grasas: ${round0(state.fatG)} g`,
+        `Carbohidratos: ${round0(state.carbG)} g`,
+        "—",
+        `Pasos: ${state.stepsText}`,
+        `Ajuste semanal: ${state.weeklyText}`,
+        "—",
+        `Interpretación: ${state.analysisText}`,
+        "",
+        `Si quieres ajuste real a tu rutina: DM "DEFICIT" → instagram.com/${INSTAGRAM_USERNAME}`
+      ].join("\n");
+    }
+
+    /*****************
+     * ACTIONS: COPY / SHARE / WHATSAPP / IG / PRINT
+     *****************/
+    async function copyResults(){
+      const txt = $("resultsTextForCopy").textContent.trim();
+      if(!txt || txt === "—") { showToast("Calcula primero 🙂"); return; }
+      try{
+        await navigator.clipboard.writeText(txt);
+        showToast("Copiado ✅");
+      }catch(e){
+        const ta = document.createElement("textarea");
+        ta.value = txt;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast("Copiado ✅");
+      }
+    }
+
+    async function shareResults(){
+      const txt = $("resultsTextForCopy").textContent.trim();
+      if(!txt || txt === "—") { showToast("Calcula primero 🙂"); return; }
+      const url = window.location.href;
+      if(navigator.share){
+        try{
+          await navigator.share({
+            title: "Mis calorías objetivo (calcular)",
+            text: txt,
+            url
+          });
+          showToast("Compartido ✅");
+        }catch(e){}
+      } else {
+        await copyResults();
+        showToast("Copiado (tu dispositivo no permite compartir) ✅");
+      }
+    }
+
+    async function openWhatsApp(){
+      const txt = $("resultsTextForCopy").textContent.trim();
+      if(!txt || txt === "—") { showToast("Calcula primero 🙂"); return; }
+      const msg = encodeURIComponent(txt);
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const url = isMobile
+        ? `whatsapp://send?text=${msg}`
+        : `https://web.whatsapp.com/send?text=${msg}`;
+      window.location.href = url;
+      showToast("Abriendo WhatsApp…");
+      trackEvent("whatsapp", null);
+    }
+
+    async function openInstagram(){
+      try { await navigator.clipboard.writeText("DEFICIT"); } catch(e){}
+
+      const params = new URLSearchParams(window.location.search);
+      const username = (params.get("u") || "").trim() || INSTAGRAM_USERNAME;
+
+      const webProfile = `https://www.instagram.com/${username}/`;
+      const deepProfile = `instagram://user?username=${encodeURIComponent(username)}`;
+      const deepDirectNew = `instagram://direct/new?username=${encodeURIComponent(username)}`;
+
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if(isMobile){
+        window.location.href = deepDirectNew;
+        setTimeout(() => { window.location.href = deepProfile; }, 600);
+        // ✅ Fix: assign como último fallback (más fiable)
+        setTimeout(() => { window.location.assign(webProfile); }, 1200);
+      } else {
+        window.open(webProfile, "_blank", "noopener,noreferrer");
+      }
+
+      showToast('Copié "DEFICIT" 📋');
+      trackEvent("instagram", null);
+    }
+
+    function printResults(){
+      window.print();
+      trackEvent("print", null);
+    }
+
+    function resetAll(){
+      ["age","height","weight","waist","neck","hip"].forEach(id => $(id).value = "");
+      $("activity").value = "1.55";
+      $("goal").value = "cut";
+      $("aggr").value = "0.15";
+      $("macroPref").value = "balanced";
+      $("sex").value = "male";
+      toggleFields();
+
+      ["bf","lbm","bmr","tdee","targetKcal","prot","fat","carb"].forEach(id => $(id).textContent = "—");
+      $("tdeeHint").textContent = "Actividad: —";
+      $("targetTag").textContent = "";
+      $("bfHint").textContent = "Introduce datos y calcula.";
+      $("analysis").textContent = "—";
+      $("stepsRec").textContent = "—";
+      $("weeklyAdjust").textContent = "—";
+      $("status").textContent = "";
+      $("resultsTextForCopy").textContent = "—";
+      $("ctaContext").innerHTML = `Esta herramienta es una estimación general. Si entrenas fuerza, haces deportes de contacto
+            o ya has hecho varias dietas, el ajuste cambia bastante.<br><br>
+            👉 Escríbeme <b>"DEFICIT"</b> por Instagram y lo vemos contigo.`;
+
+      clearInvalids();
+
+      try{
+        localStorage.removeItem("deficitCalc_v4_inputs");
+      }catch(e){}
+
+      showToast("Reset ✅");
+      trackEvent("reset", null);
+    }
+
+    function setExample(){
+      const v = getInputs();
+      if(v.sex === "female"){
+        $("sex").value = "female";
+        toggleFields();
+        $("age").value = "29";
+        $("height").value = "165";
+        $("weight").value = "68.5";
+        $("waist").value = "78.0";
+        $("neck").value = "33.0";
+        $("hip").value = "102.0";
+      } else {
+        $("sex").value = "male";
+        toggleFields();
+        $("age").value = "30";
+        $("height").value = "178";
+        $("weight").value = "86.0";
+        $("waist").value = "92.0";
+        $("neck").value = "39.0";
+      }
+      $("activity").value = "1.55";
+      $("goal").value = "cut";
+      $("aggr").value = "0.15";
+      $("macroPref").value = "balanced";
+      saveInputs();
+      showToast("Ejemplo cargado ⚡");
+    }
+
+    /*****************
+     * TRACKING (optional)
+     *****************/
+    function bucket(val, bins){
+      for(const b of bins){
+        if(val <= b) return `<=${b}`;
+      }
+      return `>${bins[bins.length-1]}`;
+    }
+
+    async function trackEvent(type, state){
+      if(!TRACKING_ENDPOINT) return;
+      try{
+        const params = new URLSearchParams(window.location.search);
+        const src = (params.get("src") || (localStorage.getItem("deficitCalc_v4_src")||"") || "").trim().toLowerCase();
+
+        const payload = { type, ts: new Date().toISOString(), src };
+
+        if(state){
+          payload.sex = state.sex;
+          payload.goal = state.goal;
+          payload.af = state.af;
+          payload.bfBucket = bucket(state.bf, [10,15,20,25,30,35,40]);
+          payload.wBucket = bucket(state.w, [60,70,80,90,100,110,120]);
+          payload.targetBucket = bucket(state.target, [1600,1800,2000,2200,2400,2600,2800,3000]);
+        }
+
+        const url = TRACKING_ENDPOINT + "?" + new URLSearchParams(payload).toString();
+        fetch(url, { method:"GET", mode:"no-cors" }).catch(()=>{});
+      }catch(e){}
+    }
+
+    /*****************
+     * INIT / EVENTS
+     *****************/
+    // ✅ FIX: Enter solo cuando el foco está en input/select (evita comportamiento raro)
+    function bindEnterToCalc(){
+      document.addEventListener("keydown", (e) => {
+        if(e.key !== "Enter") return;
+
+        const active = document.activeElement;
+        const isTypingField = active && (active.tagName === "INPUT" || active.tagName === "SELECT");
+        if(!isTypingField) return;
+
+        e.preventDefault();
+        calc();
+      });
+    }
+
+    function bindSaveOnChange(){
+      ["sex","age","height","weight","waist","neck","hip","activity","goal","aggr","macroPref"].forEach(id => {
+        const el = $(id);
+        if(!el) return;
+        el.addEventListener("input", saveInputs);
+        el.addEventListener("change", saveInputs);
+      });
+    }
+
+    function syncGoalUI(){
+      const goal = $("goal").value;
+      $("aggr").disabled = (goal !== "cut");
+      $("aggrLabel").style.opacity = (goal !== "cut") ? "0.6" : "1";
+    }
+
+    function syncMacroHint(){
+      const pref = $("macroPref").value;
+      if(pref === "highcarb") $("fatHint").textContent = "0.6 g/kg masa magra (aprox)";
+      else if(pref === "highfat") $("fatHint").textContent = "1.0 g/kg masa magra (aprox)";
+      else $("fatHint").textContent = "0.8 g/kg masa magra (aprox)";
+    }
+
+    function initUseCountChip(){
+      try{
+        const n = parseInt(localStorage.getItem("deficitCalc_v4_useCount") || "0", 10) || 0;
+        if(n > 0){
+          $("useVal").textContent = String(n);
+          $("useChip").style.display = "inline-flex";
+        }
+      }catch(e){}
+    }
+
+    // Init
+    toggleFields();
+    initTooltips();
+    initSourceAndBadge();
+    initUseCountChip();
+    loadInputs();
+    syncGoalUI();
+    syncMacroHint();
+    bindEnterToCalc();
+    bindSaveOnChange();
+
+    $("sex").addEventListener("change", () => { toggleFields(); });
+    $("goal").addEventListener("change", () => { syncGoalUI(); });
+    $("macroPref").addEventListener("change", () => { syncMacroHint(); });
+
+    $("calcBtn").addEventListener("click", calc);
+    $("resetBtn").addEventListener("click", resetAll);
+    $("exampleBtn").addEventListener("click", setExample);
+
+    $("copyBtn").addEventListener("click", copyResults);
+    $("shareBtn").addEventListener("click", shareResults);
+    $("waBtn").addEventListener("click", openWhatsApp);
+    $("igBtn").addEventListener("click", openInstagram);
+    $("printBtn").addEventListener("click", printResults);
+  </script>
+</body>
+</html
